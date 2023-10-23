@@ -33,6 +33,8 @@ char cmd;
 
 int main(void)
 {
+	conf();
+	
 	Buttons_Initialize();
 	//wtedy sie wszystkie diody sie swieca
 	LED_Initialize();
