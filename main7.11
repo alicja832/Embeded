@@ -1,0 +1,115 @@
+#include "LPC17xx.h"                    // Device header
+#include "PIN_LPC17xx.h"                // Keil::Device:PIN
+#include "Board_LED.h"                  // ::Board Support:LED
+#include "Open1768_LCD.h"
+#include "LCD_ILI9325.h"
+
+uint32_t active;
+static int i=0;
+//funkcja przesylajaca cale stringi na uarta
+void fun( char *x)
+{
+        LPC_UART0->FCR=7;
+    while(*x!='\0')
+    {
+				//sprawdzamy czy kolejka jest pusta
+        if(LPC_UART0->LSR&(1<<5))
+        {
+            LPC_UART0->THR=*x;
+            x++;
+        }
+        else{
+
+        }
+
+    }
+}
+
+//handler od przerwania z GPIO,jest to przerwanie zewnetrzne-dotniecie ekranu LCD
+void EINT3_IRQHandler(void)
+{
+    LPC_GPIOINT->IO0IntClr=(1<<19);
+    char *x="\rBang\n";
+
+     fun(x);
+
+}
+void TIMER0_IRQHandler(void)  {
+    /* Timer 0 interrupt handler  */
+    LPC_TIM0->IR |= (1 << 0);
+    char *x="Ping";
+    fun(x);
+
+}
+
+void RTC_IRQHandler(void)  {
+
+    i++;
+    LPC_RTC->ILR=1;
+    char *x="\rTak\n";
+    char *y="\rTik\n";
+    if(i%2==0)
+       fun(x);
+    else
+       fun(y);
+}
+void EINT0_IRQHandler(void)
+{
+
+    char *x="\rClick\n";
+    LPC_SC->EXTINT=1;
+     fun(x);
+
+}
+
+int main(void)
+{
+   
+    PIN_Configure(0,2,1,0,0);
+    PIN_Configure(0,3,1,0,0);
+
+    LPC_UART0->LCR=3|(1<<7);
+    LPC_UART0->DLL=27;
+    LPC_UART0->DLM=0;
+    LPC_UART0->LCR=3;
+
+    LPC_UART0->LCR=3;
+   
+
+
+    while(1)
+    {
+        if(LPC_UART0->LSR&1)
+            LPC_UART0 -> THR = LPC_UART0 -> RBR+1;
+    }
+
+    LPC_TIM0->PR=250000;
+    LPC_TIM0->MR0=50;
+    LPC_TIM0->MCR=3;
+    NVIC_EnableIRQ(TIMER0_IRQn);
+     LPC_TIM0->TCR = 1;
+    active = NVIC_GetActive(TIMER0_IRQn);
+    LPC_RTC->CCR=17;
+    LPC_RTC->CIIR=1;
+    NVIC_EnableIRQ(RTC_IRQn);
+    NVIC_GetActive(RTC_IRQn) ;
+
+
+
+    PIN_Configure (2,10,1,0,0);
+
+    LPC_SC->EXTINT=1;
+
+    LPC_SC->EXTMODE=1;
+    LPC_SC->EXTPOLAR=1;
+    NVIC_EnableIRQ(EINT0_IRQn);
+    NVIC_GetActive(EINT0_IRQn);
+
+		//GPIO od wystwietlacza-nalezy znalezc odpowiedni port
+    PIN_Configure (0,19,0,0,0);
+    LPC_GPIOINT->IO0IntEnF=(1<<19);
+    NVIC_EnableIRQ(EINT3_IRQn);
+    NVIC_GetActive(EINT3_IRQn) ;
+    
+    return 0;
+}
