@@ -15,6 +15,12 @@ int main()
 	lcdWriteReg(ADRX_RAM,  0);
 	lcdWriteReg(ADRY_RAM,  0);
 	lcdWriteIndex(DATA_RAM);
+		//tutaj jakbysmy chcieli okno narysowac
+	lcdWriteReg(HADRPOS_RAM_START,  0);
+	lcdWriteReg(HADRPOS_RAM_END,  100);
+	lcdWriteReg(VADRPOS_RAM_START,  0);
+	lcdWriteReg(VADRPOS_RAM_END,  100);
+	lcdWriteReg(ENTRYM,3);
     while(1)
     {
 						
