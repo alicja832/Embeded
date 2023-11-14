@@ -4,6 +4,8 @@
 
 int main()
 {
+	lcdConfiguration();
+	init_ILI9325();
        //trzy osobne rejestry
        //ADRX_RAM
        //ADRY_RAm
