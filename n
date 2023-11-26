@@ -7,6 +7,7 @@
 #include <cmath>
 #include "TP_Open1768.h"
 
+uint_32 zapis=0;
 uint32_t active;
 static int i=0;
 //funkcja przesylajaca cale stringi na uarta
@@ -27,23 +28,21 @@ void fun( char *x)
 
     }
 }
+//w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
+//przesylany do odtwarzania
 void jakidzwiek(int xx, int yy)
 {
 	char res1[10];
 	char res2[10];
 	char *n=" \n";
 	xx=xx-500;
-	//yy=yy-10;
+
 	char *tab[]={"1","2","3","4","5","6","7","8"};
-	//yy=130./200.*(double)yy-30;
-	//sprintf(res1, "%d", xx);
-    //sprintf(res2, "%d", yy);
-	//fun(res1);
-	//fun(n);
-	//fun(res2);
+	
 	int sk=350;
 	int sky=200;
-	int k=0;
+	int k;
+	//ustalenie ktory klawisz zostal nacisniety
 	for(k=0;k<8;k++)
 	{
 		if( xx>k*sk && xx<(k+1)*sk  && yy<sky)
@@ -58,23 +57,15 @@ void EINT3_IRQHandler()
 	int x[2];
 	char res1[20];
 	char res2[20];
-char *r="\r ";
-char *n=" \n";
-char *s=" ";
-		touchpanelGetXY(x,x+1);
-    LPC_GPIOINT->IO0IntClr=(1<<19);
-	NVIC_ClearPendingIRQ(EINT3_IRQn);
-	 jakidzwiek(x[0],x[1]);
-	/*sprintf(res1, "%d", x[0]);
-    sprintf(res2, "%d", x[1]);
-	fun(r);
-   	fun(res1);
-	fun(s);
-	fun(res2);
-	fun(n);*/
+	//rzeczy pomagajace cos sprawdzic
+	//char *r="\r ";
+	//char *n=" \n";
+	//char *s=" ";
 		
-    
-
+	touchpanelGetXY(x,x+1);
+  LPC_GPIOINT->IO0IntClr=(1<<19);
+	NVIC_ClearPendingIRQ(EINT3_IRQn);
+	jakidzwiek(x[0],x[1]);
 }
 
 void rysuj(char literka, uint16_t x, uint16_t y){
@@ -120,83 +111,49 @@ int main()
 {
 	lcdConfiguration();
 	init_ILI9325();
-       //trzy osobne rejestry
-       //ADRX_RAM
-       //ADRY_RAm
-       //DATA_RAM
+	touchpanelInit();
+    
 	int registerStatus=lcdReadReg(OSCIL_ON);
 	
 	lcdWriteReg(ADRX_RAM,  0);
 	lcdWriteReg(ADRY_RAM,  0);
 	lcdWriteIndex(DATA_RAM);
-		//tutaj jakbysmy chcieli okno narysowac
+	
+		//tutaj jakbysmy chcieli okno narysowac wydajniej
 	/*lcdWriteReg(HADRPOS_RAM_START,  0);
 	lcdWriteReg(HADRPOS_RAM_END,  100);
 	lcdWriteReg(VADRPOS_RAM_START,  0);
 	lcdWriteReg(VADRPOS_RAM_END,  100);
 	lcdWriteReg(ENTRYM,3);*/
+	
 	uint16_t i=0;
   
-	lcdWriteReg(ADRX_RAM,  100);
-	lcdWriteReg(ADRY_RAM,  100);
-	lcdWriteIndex(DATA_RAM);
-		//tutaj jakbysmy chcieli okno narysowac
-	/*lcdWriteReg(HADRPOS_RAM_START,  0);
-	lcdWriteReg(HADRPOS_RAM_END,  100);
-	lcdWriteReg(VADRPOS_RAM_START,  0);
-	lcdWriteReg(VADRPOS_RAM_END,  100);
-	lcdWriteReg(ENTRYM,3);*/
-	i=0;
+	//lcdWriteReg(ADRX_RAM,  100);
+	//lcdWriteReg(ADRY_RAM,  100);
+	//lcdWriteIndex(DATA_RAM);
 	
+  while(i<100)i++; /// idk po co,delay
 	
-   while(i<100)i++; /// idk po co
-	
+	//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
 	 PIN_Configure (0,19,0,0,0);
-    LPC_GPIOINT->IO0IntEnF=(1<<19);
-    NVIC_EnableIRQ(EINT3_IRQn);
-    NVIC_GetActive(EINT3_IRQn) ;
+   LPC_GPIOINT->IO0IntEnF=(1<<19);
+   NVIC_EnableIRQ(EINT3_IRQn);
+   NVIC_GetActive(EINT3_IRQn) ;
 	
-	
-	
-	lcdWriteReg(ADRX_RAM,  200);
-	lcdWriteReg(ADRY_RAM,  200);
+	//to chyba mozna usunac!!
+	//lcdWriteReg(ADRX_RAM,  200);
+	//lcdWriteReg(ADRY_RAM,  200);
 	lcdWriteIndex(DATA_RAM);
-	/*for(uint16_t j=0;j<16;j++)
-	{
-		
-		for(i=0;i<8;i++)
-		{
-			//lcdWriteReg(ADRX_RAM,  i);
-			//lcdWriteReg(ADRY_RAM,  j);
-			//lcdWriteReg(DATA_RAM,LCDRed);
-			//lcdWriteData(LCDRed);
-			unsigned char costam[8];
-			GetASCIICode(1,costam,'L');
-			if(*(costam+j) & (1<<abs(8-i)))
-			{
-				lcdWriteReg(ADRX_RAM,  i);
-				lcdWriteReg(ADRY_RAM,  j);
-				lcdWriteReg(DATA_RAM,LCDRed);
-			}
-			else{
-				lcdWriteReg(ADRX_RAM,  i);
-				lcdWriteReg(ADRY_RAM,  j);
-				lcdWriteReg(DATA_RAM,LCDBlue);
-			}
-
-		}
-	}*/
-	rysuj('A',0,0);
-	rysuj('L',0,8);
-	rysuj('A',0,16);
+	
+	rysuj('R',0,0);
+	rysuj('E',0,8);
+	rysuj('C',0,16);
 	rysuj(' ',0,24);
-	rysuj('M',0,32);
-	rysuj('A',0,40);
-	rysuj(' ',0,48);
-	rysuj('K',0,56);
-	rysuj('O',0,64);
-	rysuj('T',0,72);
-	rysuj('A',0,80);
+	rysuj('P',0,32);
+	rysuj('L',0,40);
+	rysuj('A',0,48);
+	rysuj('Y',0,56);
+	
 	for(i=0;i<8;i++)
 		rysujprostokat(32+i*32,10,28,130);
 		
@@ -209,29 +166,13 @@ int main()
     LPC_UART0->LCR=3;
 
     LPC_UART0->LCR=3;
-	touchpanelInit();
 	
-	
-	while(1)
+	//nie wiem po co to
+	/*while(1)
     {
         if(LPC_UART0->LSR&1)
             LPC_UART0 -> THR = LPC_UART0 -> RBR+1;
-    }
-	
-	/*while(1){
-		int x[2];
-		touchpanelGetXY(x,x+1);
-		char res[3] ;
-		res[0]=*x;
-		res[1] = ' ';
-		res[2] = *(x+1);
-		
-
-		
-	}*/
-	
-
-
-   
+    }*/
+	 
 
 }
