@@ -8,13 +8,32 @@
 
 uint_32 zapis=0;
 uint32_t active;
+volatile uint32_t msTicks = 0;
+//tablica do zapisu dzwiekow,wkaznik bedzie wskazywal na tablice
+int *dzwiek;
+//delay na pewno sie przyda
+void conf(void)
+{
+	//dlatego 10 poniewaz chcemy aby umiescic taka wartosc aby zegar wykonywal przerwanie raz na 0,1 s
+	SysTick_Config(SystemCoreClock/10);
+}
+void SysTick_Handler(void)
+{
+	msTicks++;
+}
+
+void delay(int d)
+{
+			msTicks=0;
+			while(d>msTicks);
+}
 
 //funkcja przesylajaca cale stringi na uarta
 void fun( char *x)
 {
-        LPC_UART0->FCR=7;
-    while(*x!='\0')
-    {
+      LPC_UART0->FCR=7;
+			while(*x!='\0')
+			{
 				//sprawdzamy czy kolejka jest pusta
         if(LPC_UART0->LSR&(1<<5))
         {
@@ -25,7 +44,7 @@ void fun( char *x)
 
         }
 
-    }
+			}
 }
 //w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
 //przesylany do odtwarzania
@@ -151,6 +170,7 @@ int main()
 	//lcdWriteReg(ADRY_RAM,  100);
 	//lcdWriteIndex(DATA_RAM);
 	
+	delay(1);
   while(i<100)i++; /// idk po co,delay
 	
 	//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
