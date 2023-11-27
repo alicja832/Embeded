@@ -220,12 +220,12 @@ int main()
 
     LPC_UART0->LCR=3;
 	
-	//nie wiem po co to
-	/*while(1)
+	//nie wiem po co to, musi być petla while(1)
+	while(1)
     {
         if(LPC_UART0->LSR&1)
             LPC_UART0 -> THR = LPC_UART0 -> RBR+1;
-    }*/
+    }
 	 
 
 }
