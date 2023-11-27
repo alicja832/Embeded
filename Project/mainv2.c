@@ -1,0 +1,218 @@
+#include "LPC17xx.h"                    // Device header
+#include "LCD_ILI9325.h"
+#include "Open1768_LCD.h"
+#include "asciiLib.h"
+#include "PIN_LPC17xx.h"                // Keil::Device:PIN
+#include <stdlib.h>
+#include "TP_Open1768.h"
+
+uint_32 zapis=0;
+uint32_t active;
+volatile uint32_t msTicks = 0;
+//tablica do zapisu dzwiekow,wkaznik bedzie wskazywal na tablice
+ unsigned short *dzwiek;
+ //inicjalizacja uarta
+ void Uart_init(void)
+ {
+	 	PIN_Configure(0,2,1,0,0);
+    PIN_Configure(0,3,1,0,0);
+
+    LPC_UART0->LCR=3|(1<<7);
+    LPC_UART0->DLL=27;
+    LPC_UART0->DLM=0;
+    LPC_UART0->LCR=3;
+
+    LPC_UART0->LCR=3;
+ }
+ //inicjalizacja GPIO
+ void Gpio_init(void)
+ {
+	 PIN_Configure (0,19,0,0,0);
+   LPC_GPIOINT->IO0IntEnF=(1<<19);
+   NVIC_EnableIRQ(EINT3_IRQn);
+   NVIC_GetActive(EINT3_IRQn);
+ }
+//delay na pewno sie przyda
+void conf(void)
+{
+	//dlatego 10 poniewaz chcemy aby umiescic taka wartosc aby zegar wykonywal przerwanie raz na 0,1 s
+	SysTick_Config(SystemCoreClock/10);
+}
+void SysTick_Handler(void)
+{
+	msTicks++;
+}
+
+void delay(int d)
+{
+			msTicks=0;
+			while(d>msTicks);
+}
+
+//funkcja przesylajaca cale stringi na uarta
+void fun( char *x)
+{
+      LPC_UART0->FCR=7;
+			while(*x!='\0')
+			{
+				//sprawdzamy czy kolejka jest pusta
+        if(LPC_UART0->LSR&(1<<5))
+        {
+            LPC_UART0->THR=*x;
+            x++;
+        }
+        else{
+
+        }
+
+			}
+}
+//w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
+//przesylany do odtwarzania
+void jakidzwiek(int xx, int yy)
+{
+	char res1[10];
+	char res2[10];
+	char *n=" \n";//do sprawdzania
+	xx=xx-500;
+
+	char *tab[]={"1","2","3","4","5","6","7","8"};
+	
+	int sk=350;
+	int sky=200;
+	int k;
+	//ustalenie ktory klawisz zostal nacisniety,sky do poprawy ogolnie
+	for(k=0;k<8;k++)
+	{
+		if( xx>k*sk && xx<(k+1)*sk  && yy<sky)
+			fun(tab[k]);
+	}
+
+}
+//odtwarzanie zapisanej tablicy
+void odworz()
+{
+	zapis=0;
+}
+//Rec-0-24 PLAy-32-56
+void przycisk(int x, int y)
+{
+	x=x-450;
+	int sk=350;
+	if(x<16)
+	{
+	if( y<30 && x<16)
+		zapis=1;
+	if(y>30 && y<56)
+		odworz();
+	
+	}
+}
+void EINT3_IRQHandler()
+{
+	int k;
+	while(k < 100)k++;
+	int x[2];
+	char res1[20];
+	char res2[20];
+		
+	touchpanelGetXY(x,x+1);
+  LPC_GPIOINT->IO0IntClr=(1<<19);
+	NVIC_ClearPendingIRQ(EINT3_IRQn);
+	jakidzwiek(x[0],x[1]);
+}
+
+void rysuj(char literka, uint16_t x, uint16_t y){
+	
+	for(uint16_t j=x;j<(x+16);j++)
+	{	
+		for(uint16_t i=(y);i<(y+8);i++)
+		{
+			unsigned char costam[1];
+			GetASCIICode(1,costam,literka);
+			
+			if(*(costam+j-x) & (1<<abs(8-(i-y))))
+			{
+				lcdWriteReg(ADRX_RAM,  i);
+				lcdWriteReg(ADRY_RAM,  j);
+				lcdWriteReg(DATA_RAM,LCDRed);
+			}
+			else{
+				lcdWriteReg(ADRX_RAM,  i);
+				lcdWriteReg(ADRY_RAM,  j);
+				lcdWriteReg(DATA_RAM,LCDBlue);
+			}
+
+		}
+	
+	}
+}
+void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy)
+{
+	for(uint16_t j=x;j<(x+xx);j++)
+	{	
+		for(uint16_t i=(y);i<(y+yy);i++)
+		{
+			
+				lcdWriteReg(ADRX_RAM,  i);
+				lcdWriteReg(ADRY_RAM,  j);
+				lcdWriteReg(DATA_RAM,LCDGreen);
+		}
+			
+
+	}
+}
+int main()
+{
+	lcdConfiguration();
+	init_ILI9325();
+	touchpanelInit();
+    
+	int registerStatus=lcdReadReg(OSCIL_ON);
+	
+	lcdWriteReg(ADRX_RAM,  0);
+	lcdWriteReg(ADRY_RAM,  0);
+	lcdWriteIndex(DATA_RAM);
+	
+	uint16_t i=0;
+  
+	//lcdWriteReg(ADRX_RAM,  100);
+	//lcdWriteReg(ADRY_RAM,  100);
+	//lcdWriteIndex(DATA_RAM);
+	
+	delay(1);
+  while(i<100)i++; /// idk po co,delay
+	
+	//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
+	Gpio_init();
+	
+	lcdWriteIndex(DATA_RAM);
+
+	char *rec="REC";
+	i=0;
+	while(*rec!='\0')
+	{
+		rysuj(*rec,0,i*8);
+		i++;
+	}	
+	i++;
+	char *play="PLAY";
+	while(*play!='\0')
+	{
+		rysuj(*play,0,i*8);
+		i++;
+	}	
+
+	for(i=0;i<8;i++)
+		rysujprostokat(32+i*32,10,28,130);
+	Uart_init();	
+	
+	//nie wiem po co to, musi być jakaś petla while 1
+  while(1)
+    {
+        if(LPC_UART0->LSR&1)
+            LPC_UART0 -> THR = LPC_UART0 -> RBR+1;
+    }
+	 
+
+}
