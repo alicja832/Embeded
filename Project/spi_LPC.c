@@ -16,7 +16,6 @@ void initSPI(void) {
    LPC_SPI->SPCCR = 8; // Adjust the clock rate as needed
 
 }
-
 // Function to send a byte via SPI
 void sendByteSPI(unsigned char data) {
     LPC_SPI->SPDR = data;
