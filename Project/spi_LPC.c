@@ -24,6 +24,8 @@ void sendByteSPI(unsigned char data) {
 
 // Function to initialize DAC
 void initDAC(void) {
+	//konfiguracja pinow
+PIN_Configure(0,26,3,0,0);
     // Enable DAC output
 	
    LPC_DAC->DACCTRL |= (1 << 2);
