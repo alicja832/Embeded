@@ -1,4 +1,5 @@
 #include "LPC17xx.h"
+#include "PIN_LPC17xx.h"    
 // Function to initialize SPI for communication with DAC
 void initSPI(void) {
 	//chyba trzeba jeszcze skonfigurowac piny
