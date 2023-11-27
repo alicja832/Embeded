@@ -2,6 +2,14 @@
 // Function to initialize SPI for communication with DAC
 void initSPI(void) {
 	//chyba trzeba jeszcze skonfigurowac piny
+	//serial clock for spi
+	PIN_Configure(0,15,3,0,0);
+	//master in slave out for spi
+	PIN_Configure(0,16,3,0,0);
+	//master in slave out for spi
+	PIN_Configure(0,17,3,0,0);
+	//master out slave in for spi
+	PIN_Configure(0,18,3,0,0);
     // Configure SCK, MOSI, and SSEL as per your hardware setup
     // Enable SPI, set as master, and set clock rate
    LPC_SPI->SPCR = (1 << 5) | (1 << 4) | (1 << 3);
