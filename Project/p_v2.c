@@ -59,7 +59,7 @@ void initSPI(void) {
 //zegar
 void conf(void)
 {
-	//dlatego 10 poniewaz chcemy aby umiescic taka wartosc aby zegar wykonywal przerwanie raz na 0,1 s
+	//dlatego 10 poniewaz chcemy aby umiescic taka wartosc aby zegar wykonywal przerwanie raz na 0,001 s
 	SysTick_Config(SystemCoreClock/1000.0);
 }
 void SysTick_Handler(void)
