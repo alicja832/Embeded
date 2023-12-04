@@ -29,26 +29,27 @@ void initUART(void)
 // Function to send a byte via SPI
 void sendByteSPI(unsigned char data) {
     LPC_SPI->SPDR = data;
+	//tutaj nie za bardzo wiem o co chodzi
     while (!(LPC_SPI->SPDR & (1 << 7))); // Wait for SPIF flag
 }
 //tablica do zapisu dzwiekow,wkaznik bedzie wskazywal na tablice
 void initDAC(void) {
-	//konfiguracja pinow
+	//konfiguracja pinow,mode open drain
 PIN_Configure(0,26,2,2,0);
     // Enable DAC output
 	
    //LPC_DAC->DACCTRL |= (1 << 2);
 }
 void initSPI(void) {
-	//chyba trzeba jeszcze skonfigurowac piny
-	//serial clock for spi
-	PIN_Configure(0,15,3,0,0);
+	//chyba trzeba jeszcze skonfigurowac piny, when 10- ssel0 miso0 when 11 miso,SCK0,SCK
+	//serial clock for spi, czwarta chyba ma byc chyba 2-nor pull- down nor pull-up
+	PIN_Configure(0,15,2,0,0);
+	//ssel for spi
+	PIN_Configure(0,16,2,0,0);
 	//master in slave out for spi
-	PIN_Configure(0,16,3,0,0);
-	//master in slave out for spi
-	PIN_Configure(0,17,3,0,0);
+	PIN_Configure(0,17,2,0,0);
 	//master out slave in for spi
-	PIN_Configure(0,18,3,0,0);
+	PIN_Configure(0,18,2,0,0);
     // Configure SCK, MOSI, and SSEL as per your hardware setup
     // Enable SPI, set as master, and set clock rate
    LPC_SPI->SPCR = (1 << 5) | (1 << 4) | (1 << 3);
@@ -128,7 +129,7 @@ void jakidzwiek(int xx, int yy)
 	xx=xx-500;
 
 	char *tab[]={"1","2","3","4","5","6","7","8"};
-	
+	int f[]={262,294,330,349,392,440,493,523};
 	int sk=350;
 	int sky=200;
 	int k;
@@ -138,7 +139,8 @@ void jakidzwiek(int xx, int yy)
 		if( xx>k*sk && xx<(k+1)*sk)//y do dodania
 		{
 			fun(tab[k]);
-			
+			//sprawdzanie czy dziala ta funkcja,mozna sprawdzic z poziomu  maina
+			zagraj(f[k],2);
 		}
 	}
 	
