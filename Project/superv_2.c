@@ -185,40 +185,18 @@ void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy,uint16_t co
 
 	}
 }
-int main()
+void create_ui()
 {
-	
-	LPC_TIM0->PR=SystemCoreClock/1000000-1;
-  LPC_TIM0->MR0=1000-1;
-  LPC_TIM0->MCR=3;
-  NVIC_EnableIRQ(TIMER0_IRQn);
-	//wlaczanie timera
-  LPC_TIM0->TCR = 1;
-  active = NVIC_GetActive(TIMER0_IRQn);
-	
-	lcdConfiguration();
-	init_ILI9325();
-	touchpanelInit();
-	initDAC();
-	initSPI();
-	//sendByteSPI(128);
 	
 	int registerStatus=lcdReadReg(OSCIL_ON);
 	
 	lcdWriteReg(ADRX_RAM,  0);
 	lcdWriteReg(ADRY_RAM,  0);
 	lcdWriteIndex(DATA_RAM);
-	
-	//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
-	 PIN_Configure (0,19,0,0,0);
-   LPC_GPIOINT->IO0IntEnF=(1<<19);
-   NVIC_EnableIRQ(EINT3_IRQn);
-   NVIC_SetPriority(EINT3_IRQn,1) ;
-   NVIC_GetActive(EINT3_IRQn) ;
-  
-	
+
 	lcdWriteIndex(DATA_RAM);
 	rysujprostokat(0,0,320,240,LCDBlue);
+	//nie wyglada to ladnie ale przynajmniej malo pamieci zabiera xd
 	rysuj('R',0,0);
 	rysuj('E',0,8);
 	rysuj('C',0,16);
@@ -231,17 +209,42 @@ int main()
 	short int i;
 	for(i=0;i<8;i++)
 		rysujprostokat(32+i*32,10,28,130,LCDGreen);
-
-	zagraj(440,1000);
-	zagraj(240,1000);
+}
+void initGPIO()
+{
+		//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
+   PIN_Configure (0,19,0,0,0);
+   LPC_GPIOINT->IO0IntEnF=(1<<19);
+   NVIC_EnableIRQ(EINT3_IRQn);
+   NVIC_SetPriority(EINT3_IRQn,1) ;
+   NVIC_GetActive(EINT3_IRQn) ;
+}
+void init_timer0()
+{
+  LPC_TIM0->PR=SystemCoreClock/1000000-1;
+  LPC_TIM0->MR0=1000-1;
+  LPC_TIM0->MCR=3;
+  NVIC_EnableIRQ(TIMER0_IRQn);
+	//wlaczanie timera
+  LPC_TIM0->TCR = 1;
+  active = NVIC_GetActive(TIMER0_IRQn);
+}
+int main()
+{
+  init_timer0();
+  lcdConfiguration();
+  init_ILI9325();
+  touchpanelInit();
+  initDAC();
+  initSPI();
+  initGPIO();
+  create_UI();
+	//sendByteSPI(128);
 	//zeby sprobowac
-	zagraj2(240,1000);
+  init_GPIO();
+  zagraj2(240,1000);
 	
 	//glowna petla programu
-	while(1)
-    {
-		
-    }
-	 
-
+  while(1)
+  {}
 }
