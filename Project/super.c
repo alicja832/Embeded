@@ -8,6 +8,7 @@
 
 uint32_t zapis=0;
 uint32_t active;
+
 volatile uint32_t msTicks = 0;
 volatile uint32_t msTicks2 = 0;
 void TIMER0_IRQHandler(void)  {
