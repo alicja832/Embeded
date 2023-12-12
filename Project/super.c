@@ -257,8 +257,11 @@ void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy,uint16_t co
 }
 int main()
 {
-	 LPC_TIM0->PR=SystemCoreClock/1000000-1;
-    LPC_TIM0->MR0=1000-1;
+    //LPC_TIM0->PR=SystemCoreClock/1000000-1;
+    //LPC_TIM0->MR0=1000-1;
+    //LPC_TIM0->MCR=3;
+    LPC_TIM0->PR=250000-1;
+    LPC_TIM0->MR0=1;
     LPC_TIM0->MCR=3;
     NVIC_EnableIRQ(TIMER0_IRQn);
 		//wlaczanie timera
@@ -310,7 +313,7 @@ int main()
 
 	zagraj(440,1000);
 	zagraj(240,1000);
-	
+	zagraj2(440,1000);
 	//glowna petla programu
 	while(1)
     {
