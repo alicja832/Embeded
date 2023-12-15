@@ -202,11 +202,10 @@ void create_ui()
 	rysuj('R',0,0);
 	rysuj('E',0,8);
 	rysuj('C',0,16);
-	rysuj(' ',0,24);
-	rysuj('P',0,32);
-	rysuj('L',0,40);
-	rysuj('A',0,48);
-	rysuj('Y',0,56);
+	rysuj('P',300,32);
+	rysuj('L',300,40);
+	rysuj('A',300,48);
+	rysuj('Y',300,56);
 	
 	short int i;
 	for(i=0;i<8;i++)
