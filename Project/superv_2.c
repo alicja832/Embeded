@@ -5,6 +5,7 @@
 #include "PIN_LPC17xx.h"                // Keil::Device:PIN
 #include <stdlib.h>
 #include "TP_Open1768.h"
+#include "Driver_SPI.h"                 // ::CMSIS Driver:SPI
 
 //zmienna globalna informujaca czy zapis jest wlaczony
 uint32_t zapis=-1;
@@ -22,8 +23,9 @@ volatile uint32_t msTicks2 = 0;
 //zastosowanie struktury, zeby mozna bylo tam wsadzic dzwiek oraz do tego czas przez jaki ma byc odgrywany
 struct nutka
 {
-	short int dzwiek;
+	int dzwiek;
   	int time;
+	//jak bedzie spi to bedzie uint8_t
 };
 //tablica do ktorej bedziemy zapisywac dzwieki
 struct nutka melody[100];
