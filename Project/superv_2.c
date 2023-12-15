@@ -6,8 +6,15 @@
 #include <stdlib.h>
 #include "TP_Open1768.h"
 
-uint32_t zapis;
+//zmienna globalna informujaca czy zapis jest wlaczony
+uint32_t zapis=-1;
 uint32_t active;
+
+//rzeczy do SPI
+extern ARM_DRIVER_SPI Driver_SPI2;
+ARM_DRIVER_SPI* SPIdrv = &Driver_SPI2;
+const uint8_t testdata_out_0[1] = {0};
+const uint8_t testdata_out[1] = {128}; 
 
 volatile uint32_t msTicks2 = 0;
 
@@ -16,7 +23,7 @@ volatile uint32_t msTicks2 = 0;
 struct nutka
 {
 	short int dzwiek;
-  int time;
+  	int time;
 };
 //tablica do ktorej bedziemy zapisywac dzwieki
 struct nutka melody[100];
@@ -33,33 +40,27 @@ void initDAC(void) {
 	PIN_Configure(0,26,2,2,0);
     // Enable DAC output
 }
-//??????????
+//robi to za nas bibioteka
 void initSPI(void) {
-	//chyba trzeba jeszcze skonfigurowac piny, when 10- ssel0 miso0 when 11 miso,SCK0,SCK
-	//serial clock for spi, czwarta chyba ma byc chyba 2-nor pull- down nor pull-up
-	PIN_Configure(0,15,2,2,0);
-	//ssel for spi
-	PIN_Configure(0,16,2,2,0);
-	//master in slave out for spi
-	PIN_Configure(0,17,2,2,0);
-	//master out slave in for spi
-	PIN_Configure(0,18,2,2,0);
-    // Configure SCK, MOSI, and SSEL as per your hardware setup
-	//trzeba ustawic master mode
-	
-    // Enable SPI, set as master, and set clock rate,maybe ok
-   LPC_SPI->SPCR = (1 << 5) | (1 << 4) | (1 << 2);
-   LPC_SPI->SPCCR = 8; // Adjust the clock rate as needed
-
+	SPIdrv->Initialize(NULL);
+	SPIdrv->PowerControl(ARM_POWER_FULL);
+	SPIdrv->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1 | ARM_SPI_MSB_LSB | ARM_SPI_SS_MASTER_SW | ARM_SPI_DATA_BITS(8),
+	10000000);
+	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);   
 }
 ///?????????
-// Function to send a byte via SPI
-void sendByteSPI(unsigned short data) {
-	//. Write the data to transmitted to the SPI Data Register. This write starts the SPI data transfer
-    LPC_SPI->SPDR = data;
-	//3. Wait for the SPIF bit in the SPI Status Register to be set to 1. The SPIF bit will be set 
-	//after the last cycle of the SPI data transfer
-    while (!(LPC_SPI->SPDR & (1 << 7))); // Wait for SPIF flag
+// Function to send a byte via SPI, narazie z tym co dzialalo
+void sendByteSPI(uint8_t data) {
+	
+	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);        /* Transmit some data */  
+	SPIdrv->Send(testdata_out, sizeof(testdata_out));
+		if(!SPIdrv->GetStatus().busy)
+		{	
+			//delay(1);
+			//SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);    
+			SPIdrv->Send(testdata_out, sizeof(testdata_out_0));
+			//delay(1);
+		}
 }
 //zegar
 void delay2(int d)
@@ -91,39 +92,6 @@ void zagraj2(int f,int time)
 			
 	}
 }
-//w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
-//przesylany do odtwarzania
-void jakidzwiek(int xx, int yy)
-{
-	char *n=" \n";
-	xx=xx-500;
-
-	//char *tab[]={"1","2","3","4","5","6","7","8"};
-	int f[]={262,294,330,349,392,440,493,523};
-	int sk=350;
-	//int sky=200;
-	short int k;
-	//ustalenie ktory klawisz zostal nacisniety
-	for(k=0;k<8;k++)
-	{
-		if( xx>k*sk && xx<(k+1)*sk)//y do dodania
-		{
-			//fun(tab[k]);
-			if(zapis>=0 && zapis<100)
-			{
-				melody[zapis].dzwiek=f[k];
-				melody[zapis].time=1000;
-				zapis++;
-			}	
-			//sprawdzanie czy dziala 	ta funkcja,mozna sprawdzic z poziomu  maina
-			delay2(1000);
-			zagraj2(f[k],1000);
-			delay2(1000);
-		}
-	}
-	
-
-}
 void rysuj(char literka, uint16_t x, uint16_t y){
 	
 	for(uint16_t j=x;j<(x+16);j++)
@@ -150,7 +118,46 @@ void rysuj(char literka, uint16_t x, uint16_t y){
 
 
 }
+//w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
+//przesylany do odtwarzania
+void jakidzwiek(int xx, int yy)
+{
+	//kalibracja
+	int f[]={262,294,330,349,392,440,493,523};
+	int sk=350;
+	//int sky=200;//to nie dziala
+	short int k;
+	xx=xx-500;
+	//czy zostal wcisniety klawisz REC
+	if(xx<0)
+		zapis=0;
 
+	//czy zostal wcisniety klawisz play
+	if( xx>8*sk)
+	{
+		for(k=0;k<zapis;k++)
+			zagraj2(melody[k].dzwiek,melody[k].time);
+	}
+	//ustalenie ktory klawisz zostal nacisniety
+	for(k=0;k<8;k++)
+	{
+		if( xx>k*sk && xx<(k+1)*sk)//y do dodania
+		{
+			//fun(tab[k]);
+			if(zapis>=0 && zapis<100)
+			{
+				melody[zapis].dzwiek=f[k];
+				//narazie tutaj powinien byc czas jak dlugo przycisk byl przycisniety
+				melody[zapis].time=1000;
+				zapis++;
+			}	
+			//sprawdzanie czy dziala
+			zagraj2(f[k],1000);
+		}
+	}
+	
+
+}
 //musi byc oddzielny timer -niezalezny delay
 void EINT3_IRQHandler()
 {	
@@ -159,14 +166,7 @@ void EINT3_IRQHandler()
 	touchpanelGetXY(x,x+1);
 	LPC_GPIOINT->IO0IntClr=(1<<19);
 	NVIC_ClearPendingIRQ(EINT3_IRQn);
-	//trzeba jeszcze dodac funkcjonalnosc, ktora pozwoli na obsluge rec i play
-	//jesli rec- zapis=1;
-	//co jesli play?
-	jakidzwiek(x[0],x[1]);
-	//to nie dziala jak powinno
-	//if play
-	//for(k=0;k<zapis;k++)
-	//zagraj2(melody[k].dzwiek,melody[k].time)		
+	jakidzwiek(x[0],x[1]);	
 }
 
 
@@ -239,11 +239,7 @@ int main()
   initSPI();
   initGPIO();
   create_UI();
-	//sendByteSPI(128);
-	//zeby sprobowac
   init_GPIO();
-  zagraj2(240,1000);
-	
 	//glowna petla programu
   while(1)
   {}
