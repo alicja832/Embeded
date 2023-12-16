@@ -10,8 +10,16 @@
 //z biblioteki spi
 
 //tablica do ktorej bedziemy zapisywac dzwieki
-short int melody[100];
-uint32_t zapis=0;
+struct nutka
+{
+	int dzwiek;
+  	uint32_t time;
+	//jak bedzie spi to bedzie uint8_t
+};
+//tablica do ktorej bedziemy zapisywac dzwieki
+struct nutka melody[100];
+
+uint32_t zapis=-1;
 extern ARM_DRIVER_SPI Driver_SPI2;
  ARM_DRIVER_SPI* SPIdrv = &Driver_SPI2;
 
@@ -19,7 +27,6 @@ const uint8_t testdata_out_0[1] = {0};
 const uint8_t testdata_out[1] = {128}; 
 uint32_t active;
 
-volatile uint32_t msTicks = 0;
 volatile uint32_t msTicks2 = 0;
 void TIMER0_IRQHandler(void)  {
     /* Timer 0 interrupt handler  */
@@ -46,55 +53,41 @@ void initUART(void)
 //tablica do zapisu dzwiekow,wkaznik bedzie wskazywal na tablice
 void initDAC(void) {
 	//konfiguracja pinow,mode open drain
-PIN_Configure(0,26,2,2,0);
-    // Enable DAC output
-	
-   //LPC_DAC->DACCTRL |= (1 << 2);
+	PIN_Configure(0,26,2,2,0);
 }
 void initSPI(void) {
-	//chyba trzeba jeszcze skonfigurowac piny, when 10- ssel0 miso0 when 11 miso,SCK0,SCK
-	//serial clock for spi, czwarta chyba ma byc chyba 2-nor pull- down nor pull-up
-	PIN_Configure(0,15,2,2,0);
-	//ssel for spi
-	PIN_Configure(0,16,2,2,0);
-	//master in slave out for spi
-	PIN_Configure(0,17,2,2,0);
-	//master out slave in for spi
-	PIN_Configure(0,18,2,2,0);
-    // Configure SCK, MOSI, and SSEL as per your hardware setup
-    // Enable SPI, set as master, and set clock rate
-   LPC_SPI->SPCR = (1 << 5) | (1 << 4) | (1 << 2);
-   LPC_SPI->SPCCR = 8; // Adjust the clock rate as needed
+	SPIdrv->Initialize(NULL);
+	SPIdrv->PowerControl(ARM_POWER_FULL);
+	SPIdrv->Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1 | ARM_SPI_MSB_LSB | ARM_SPI_SS_MASTER_SW | ARM_SPI_DATA_BITS(8),
+	10000000);
+	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);  
 
 }
 // Function to send a byte via SPI
 void sendByteSPI(unsigned short data) {
-    LPC_SPI->SPDR = data;
-	//tutaj nie za bardzo wiem o co chodzi
-    while (!(LPC_SPI->SPDR & (1 << 7))); // Wait for SPIF flag
+	//wysylamy jakies 128 albo 255,ja bym dala 255
+	//aktywacja
+	//uwaga - musimy wyslac infromacje - czyli CONTROL BITS, dlatego 16-bo robimy PDB,wylaczamy drugi konwerter,nie wiem co z tym bitem wskazujacym na napiecie
+	uint8_t info=16;
+	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);        /* Transmit some data */  
+	SPIdrv->Send(&info,1);
+	while(SPIdrv->GetStatus().busy==1);
+	//teraz dopiero wlasciwe informacje
+	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);        /* Transmit some data */  
+	SPIdrv->Send(&data,1);
+	while(SPIdrv->GetStatus().busy==1);
+	//dezaktywacja
+	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
 }
 void SysTick_Handler(void)
 {   
 	msTicks++;
 	
 }
-//zegar
-void conf(void)
-{
-	//dlatego 10 poniewaz chcemy aby umiescic taka wartosc aby zegar wykonywal przerwanie raz na 0,001 s
-	SysTick_Config(SystemCoreClock/1000.0);
-}
-
 void delay2(int d)
 {
 			msTicks2=0;
 			while(d>msTicks2);
-}
-
-void delay(int d)
-{
-			msTicks=0;
-			while(d>msTicks);
 }
 // Function to send data to DAC
 void sendToDAC(unsigned short data) {
@@ -194,65 +187,86 @@ void rysuj(char literka, uint16_t x, uint16_t y){
 	
 	}
 }
+void create_ui()
+{
+	
+	int registerStatus=lcdReadReg(OSCIL_ON);
+	
+	lcdWriteReg(ADRX_RAM,  0);
+	lcdWriteReg(ADRY_RAM,  0);
+	lcdWriteIndex(DATA_RAM);
+
+	lcdWriteIndex(DATA_RAM);
+	rysujprostokat(0,0,320,240,LCDBlue);
+	//nie wyglada to ladnie ale przynajmniej malo pamieci zabiera xd
+	rysuj('R',0,0);
+	rysuj('E',0,8);
+	rysuj('C',0,16);
+	rysuj('P',300,32);
+	rysuj('L',300,40);
+	rysuj('A',300,48);
+	rysuj('Y',300,56);
+	
+	short int i;
+	for(i=0;i<8;i++)
+		rysujprostokat(32+i*32,10,28,130,LCDGreen);
+}
 //musi byc oddzielny timer -niezalezny delay
 void EINT3_IRQHandler()
 {
-	//int k;
-	//while(k < 100)k++;
+	//Rising edge
+	if( LPC_GPIOINT->IO0IntStatR & (1<<19))
+	{	
+		//odliczanie czasu przez jaki przycisk bedzie przycisniety
+		msTicks2=0;
+		LPC_GPIOINT->IO0IntClr=(1<<19);
+		NVIC_ClearPendingIRQ(EINT3_IRQn);
+		return;
+	}
 	int x[2];
-	//char res1[20];
-	//char res2[20];
+	
 	touchpanelGetXY(x,x+1);
 	LPC_GPIOINT->IO0IntClr=(1<<19);
 	NVIC_ClearPendingIRQ(EINT3_IRQn);
 	
-	//delay2(1);
-	//zagraj(240,1000);
-	//while(i<1000) i++;
-	
-	//jakidzwiek(x[0],x[1]);
-	//to nie dziala jak powinno
-	{
 	char *tab[]={"1","2","3","4","5","6","7","8"};
 	short int f[]={262,294,330,349,392,440,493,523};
-	//int sk=350;
-	//int sky=200;
+	
 	short int k;
 	//ustalenie ktory klawisz zostal nacisniety
 	x[1]+=100;
 	x[0]=x[0]-500;
-	if(x[0]<0) zapis=1;
+	
+	//obsluga rec i play
+	if(x[0]<0) zapis=0;
+	if( xx[0]>8*350)
+	{
+		for(k=0;k<zapis;k++)
+			zagraj2(melody[k].dzwiek,melody[k].time);
+		zapis=-1;
+		return;
+	}
+	
 	for(k=0;k<8;k++)
 	{
 		if( x[0]>k*350 && x[0]<(k+1)*350 &&x[1]<300 )//y do dodania
 		{
 			int pwm_period=1000/f[k];
-			for(short int i=0;i<100/pwm_period;i++)
+			for(short int i=0;i<msTicks2/pwm_period;i++)
 			{
 			sendToDAC(128);
 			delay2( pwm_period);
 			sendToDAC(0);
 			delay2( pwm_period);
-			if(zapis>0 && zapis<100)
-				melody[zapis]=f[k];
+			if(zapis>=0 && zapis<100)
+				melody[zapis].dzwiek=f[k];
+				melody[zapis].time=msTicks;
 				zapis++;
 			}
 		}
 	}
-	//short int f=440;
-	//int time=10000;
-	/*int pwm_period=1000/440;//dlaczego tys, tu powinna byc teoretycznie 1 s, ale mi intuicja mowi ze bedzie tu 1000
-	//dlugosc trwania
-	//short int t=10;
-	for(short int i=0;i<100/pwm_period;i++)
-	{
-			sendToDAC(128);
-			delay2( pwm_period);
-			sendToDAC(0);
-			delay2( pwm_period);
-			
-	}*/
-}
+
+
 }
 
 void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy,uint16_t color)
@@ -270,22 +284,22 @@ void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy,uint16_t co
 
 	}
 }
+void init_GPIO()
+{
+   PIN_Configure (0,19,0,0,0);
+   LPC_GPIOINT->IO0IntEnF=(1<<19);
+   LPC_GPIOINT->IO0IntEnR=(1<<19);
+   NVIC_EnableIRQ(EINT3_IRQn);
+   NVIC_SetPriority(EINT3_IRQn,1) ;
+   NVIC_GetActive(EINT3_IRQn) ;
+
+}
 int main()
 {
-	
-	
-	
-	/* SS line = ACTIVE = LOW */       
-	        /* Wait for completion */
-    
-	
-	
-	/*LPC_TIM0->PR=SystemCoreClock/1000000-1;
+    LPC_TIM0->PR=SystemCoreClock/1000000-1;
     LPC_TIM0->MR0=1000-1;
     LPC_TIM0->MCR=3;
-    //LPC_TIM0->PR=250000-1;
-   // LPC_TIM0->MR0=1;
-    //LPC_TIM0->MCR=3;
+    
     NVIC_EnableIRQ(TIMER0_IRQn);
 		//wlaczanie timera
     LPC_TIM0->TCR = 1;
@@ -293,43 +307,34 @@ int main()
 	lcdConfiguration();
 	init_ILI9325();
 	touchpanelInit();
-	conf();
 	initDAC();
 	//initSPI();
 	//sendByteSPI(1);
 	//initUART();
+	create_ui();
+	init_GPIO();
+	// int registerStatus=lcdReadReg(OSCIL_ON);
 	
-	int registerStatus=lcdReadReg(OSCIL_ON);
+	// lcdWriteReg(ADRX_RAM,  0);
+	// lcdWriteReg(ADRY_RAM,  0);
+	// lcdWriteIndex(DATA_RAM);
 	
-	lcdWriteReg(ADRX_RAM,  0);
-	lcdWriteReg(ADRY_RAM,  0);
-	lcdWriteIndex(DATA_RAM);
+
+	// napisana jest do tego funkcja
 	
-	uint16_t i=0;
+	// lcdWriteIndex(DATA_RAM);
+	// rysujprostokat(0,0,320,240,LCDBlue);
+	// rysuj('R',0,0);
+	// rysuj('E',0,8);
+	// rysuj('C',0,16);
+	// //for(int i =0;i<10;i++)rysuj(' ',0,24 +i*8);
+	// rysuj('P',0,96);
+	// rysuj('L',0,104);
+	// rysuj('A',0,112);
+	// rysuj('Y',0,120);
 	
-  while(i<100)i++; /// idk po co,delay
-	
-	//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
-	 PIN_Configure (0,19,0,0,0);
-   LPC_GPIOINT->IO0IntEnF=(1<<19);
-   NVIC_EnableIRQ(EINT3_IRQn);
-   NVIC_SetPriority(EINT3_IRQn,1) ;
-   NVIC_GetActive(EINT3_IRQn) ;
-  
-	
-	lcdWriteIndex(DATA_RAM);
-	rysujprostokat(0,0,320,240,LCDBlue);
-	rysuj('R',0,0);
-	rysuj('E',0,8);
-	rysuj('C',0,16);
-	//for(int i =0;i<10;i++)rysuj(' ',0,24 +i*8);
-	rysuj('P',0,96);
-	rysuj('L',0,104);
-	rysuj('A',0,112);
-	rysuj('Y',0,120);
-	
-	for(i=0;i<8;i++)
-		rysujprostokat(32+i*32,10,28,130,LCDGreen);
+	// for(i=0;i<8;i++)
+	// 	rysujprostokat(32+i*32,10,28,130,LCDGreen);
 		
 	
 	//delay(1000);
@@ -363,11 +368,7 @@ int main()
 	while(1)
     {
 		
-		//SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);        /* Transmit some data */     
-		//SPIdrv->Send(testdata_out, sizeof(testdata_out));
-		
 		
     }
-	    SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
 
 }
