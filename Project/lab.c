@@ -38,7 +38,7 @@ LPC_TIM0->IR |= (1 << 0);
 void initUART(void)
 {
 		
-		PIN_Configure(0,2,1,0,0);
+    PIN_Configure(0,2,1,0,0);
     PIN_Configure(0,3,1,0,0);
 
     LPC_UART0->LCR=3|(1<<7);
@@ -258,10 +258,12 @@ void EINT3_IRQHandler()
 			delay2( pwm_period);
 			sendToDAC(0);
 			delay2( pwm_period);
-			if(zapis>=0 && zapis<100)
-				melody[zapis].dzwiek=f[k];
-				melody[zapis].time=msTicks;
-				zapis++;
+				if(zapis>=0 && zapis<100)
+				{	
+					melody[zapis].dzwiek=f[k];
+					melody[zapis].time=msTicks;
+					zapis++;
+				}
 			}
 		}
 	}
