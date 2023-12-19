@@ -64,7 +64,7 @@ void initSPI(void) {
 
 }
 // Function to send a byte via SPI
-void sendByteSPI(unsigned short data) {
+void sendByteSPI(uint8_t info) {
 	//wysylamy jakies 128 albo 255,ja bym dala 255
 	//aktywacja
 	//uwaga - musimy wyslac infromacje - czyli CONTROL BITS, dlatego 16-bo robimy PDB,wylaczamy drugi konwerter,nie wiem co z tym bitem wskazujacym na napiecie
@@ -74,7 +74,10 @@ void sendByteSPI(unsigned short data) {
 	while(SPIdrv->GetStatus().busy==1);
 	//teraz dopiero wlasciwe informacje
 	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);        /* Transmit some data */  
-	SPIdrv->Send(&data,1);
+	if(info)
+		SPIdrv->Send(testdata_out,sizeof(testdata_out));
+	else
+		SPIdrv->Send(testdata_out_0,sizeof(testdata_out_0));
 	while(SPIdrv->GetStatus().busy==1);
 	//dezaktywacja
 	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
@@ -341,12 +344,12 @@ int main()
 	
 	//delay(1000);
 
-	zagraj(440,1000);
-	zagraj(240,1000);
+	//zagraj(440,1000);
+	//zagraj(240,1000);
 	//zagraj2(440,1000);
 	//glowna petla programu
 	//delay(1);
-		*/
+		
 		
 	
 		//if(!SPIdrv->GetStatus().busy)
