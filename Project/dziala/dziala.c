@@ -30,30 +30,6 @@ LPC_TIM0->IR |= (1 << 0);
 	 msTicks2++;
    // USARTdrv->Send("Ping\n", 4);
 }
-//procedura inicjujaca uarta
-void initUART(void)
-{
-		
-		PIN_Configure(0,2,1,0,0);
-    PIN_Configure(0,3,1,0,0);
-
-    LPC_UART0->LCR=3|(1<<7);
-    LPC_UART0->DLL=27;
-    LPC_UART0->DLM=0;
-    LPC_UART0->LCR=3;
-
-    LPC_UART0->LCR=3;
-}
-
-
-//tablica do zapisu dzwiekow,wkaznik bedzie wskazywal na tablice
-void initDAC(void) {
-	//konfiguracja pinow,mode open drain
-PIN_Configure(0,26,2,2,0);
-    // Enable DAC output
-	
-   //LPC_DAC->DACCTRL |= (1 << 2);
-}
 void initSPI(void) {
 	SPIdrv->Initialize(NULL);
 	SPIdrv->PowerControl(ARM_POWER_FULL);
@@ -112,11 +88,6 @@ void delay(int d)
 			msTicks=0;
 			while(d>msTicks);
 }
-// Function to send data to DAC
-void sendToDAC(unsigned short data) {
-    LPC_DAC->DACR = (data << 6);
-}
-
 
 //delay na pewno sie przyda
 void zagraj2(int f,int time)
@@ -137,24 +108,6 @@ void zagraj2(int f,int time)
 	}
 }
 
-//funkcja przesylajaca cale stringi na uarta
-void fun( char *x)
-{
-     LPC_UART0->FCR=7;
-    while(*x!='\0')
-    {
-				//sprawdzamy czy kolejka jest pusta
-        if(LPC_UART0->LSR&(1<<5))
-        {
-            LPC_UART0->THR=*x;
-            x++;
-        }
-        else{
-
-        }
-
-    }
-}
 //w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
 //przesylany do odtwarzania
 
@@ -201,32 +154,23 @@ void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy,uint16_t co
 //musi byc oddzielny timer -niezalezny delay
 void EINT3_IRQHandler()
 {
-	//int k;
-	//while(k < 100)k++;
 	//static uint32_t time=0;
-	/*if( LPC_GPIOINT->IO0IntStatR & (1<<19))
+	if( LPC_GPIOINT->IO0IntStatR & (1<<19))
 	{	
 		//odliczanie czasu przez jaki przycisk bedzie przycisniety
 		//time=msTicks;
 		LPC_GPIOINT->IO0IntClr=(1<<19);
 		NVIC_ClearPendingIRQ(EINT3_IRQn);
+		//rysujprostokat(0,0,16,100,LCDYellow);
 		return;
-	}*/
+	}
 	int x[2];
 
-	//char res1[20];
-	//char res2[20];
 	touchpanelGetXY(x,x+1);
 	LPC_GPIOINT->IO0IntClr=(1<<19);
 	NVIC_ClearPendingIRQ(EINT3_IRQn);
-	//delay2(1);
-	//zagraj(240,1000);
-	//while(i<1000) i++;
 	
-	//jakidzwiek(x[0],x[1]);
-	//to nie dziala jak powinno
-	{
-	char *tab[]={"1","2","3","4","5","6","7","8"};
+	
 	short int f[]={200,294,330,349,392,440,493,523};
 	//int sk=350;
 	//int sky=200;
@@ -239,61 +183,38 @@ void EINT3_IRQHandler()
 			if(zapis==0){
 				zapis=1;
 				rysujprostokat(0,0,16,100,LCDYellow);
+				
 			}
 				else if(zapis>0)
 				{
 					rysujprostokat(0,0,16,100,LCDRed);
-					/*for(int i =0;i<8;i++){
-						zagraj2(f[i],10000);
-					}*/
+					
 					for(int i =0;i<zapis;i++){
 						zagraj2(melody[i].dzwiek,10000);
-					
-				}
+						melody[i].dzwiek =0;
+					}
 					zapis=0;
+					
 			}
-			
-			//zapis=1;
-			//for test jeszcze wyzsza
-			
-			//zagraj2(440,10000);
-			/*sendByteSPI(1);
-			delay2(100000/700);
-			sendByteSPI(0);
-			delay2(100000/700);*/
 			return;
 		}
 
 	for(k=0;k<8;k++)
 	{
-		if( x[0]>k*350 && x[0]<(k+1)*350)//y do dodania
+		if( x[0]>(k*350+100) && x[0]<(k+1)*350)//y do dodania
 		{
 			
 			zagraj2(f[k],10000);
 			if(zapis>0 && zapis<100)
 			{
 				melody[zapis-1].dzwiek=f[k];
-				//narazie tutaj powinien byc czas jak dlugo przycisk byl przycisniety
 				//melody[zapis-1].time=1000;
 				zapis++;
 			}
 			
-			}
 		}
 	}
-	//short int f=440;
-	//int time=10000;
-	/*int pwm_period=1000/440;//dlaczego tys, tu powinna byc teoretycznie 1 s, ale mi intuicja mowi ze bedzie tu 1000
-	//dlugosc trwania
-	//short int t=10;
-	for(short int i=0;i<100/pwm_period;i++)
-	{
-			sendToDAC(128);
-			delay2( pwm_period);
-			sendToDAC(0);
-			delay2( pwm_period);
-			
-	}*/
+	
  
 }
 
@@ -302,7 +223,7 @@ void init_GPIO()
 {
    PIN_Configure (0,19,0,0,0);
    LPC_GPIOINT->IO0IntEnF=(1<<19);
-   LPC_GPIOINT->IO0IntEnR=(1<<19);
+   //LPC_GPIOINT->IO0IntEnR=(1<<19);
    NVIC_EnableIRQ(EINT3_IRQn);
    NVIC_SetPriority(EINT3_IRQn,1) ;
    NVIC_GetActive(EINT3_IRQn) ;
@@ -319,19 +240,6 @@ void initTimer0_2()
 	 LPC_TIM0->TCR = 1;
    active = NVIC_GetActive(TIMER0_IRQn);
 }
-void initTimer()
-{
-	 LPC_TIM0->PR=SystemCoreClock/1000000-1;
-    LPC_TIM0->MR0=1000-1;
-    LPC_TIM0->MCR=3;
-    //LPC_TIM0->PR=250000-1;
-    //LPC_TIM0->MR0=1;
-    //LPC_TIM0->MCR=3;
-    NVIC_EnableIRQ(TIMER0_IRQn);
-		//wlaczanie timera
-    LPC_TIM0->TCR = 1;
-    active = NVIC_GetActive(TIMER0_IRQn);
-}
 int main()
 {
    
@@ -339,11 +247,8 @@ int main()
 	init_ILI9325();
 	touchpanelInit();
 	conf();
-	initDAC();
 	initSPI();
 	init_GPIO();
-	//sendByteSPI(1);
-	//initUART();
 	
 	int registerStatus=lcdReadReg(OSCIL_ON);
 	
@@ -355,12 +260,6 @@ int main()
 	
   while(i<100)i++; /// idk po co,delay
 	
-	//konfiguracja GPIO do informowania o przerwaniach-dotykanie ekranu
-	/* PIN_Configure (0,19,0,0,0);
-   LPC_GPIOINT->IO0IntEnF=(1<<19);
-   NVIC_EnableIRQ(EINT3_IRQn);
-   NVIC_SetPriority(EINT3_IRQn,1) ;
-   NVIC_GetActive(EINT3_IRQn) ;*/
 	lcdWriteIndex(DATA_RAM);
 	rysujprostokat(0,0,320,240,LCDBlue);
 	
@@ -376,16 +275,11 @@ int main()
 	for(i=0;i<8;i++)
 		rysujprostokat(32+i*32,10,28,130,LCDGreen);
 		
-	//delay(1000);
-
-	//zagraj(440,1000);
-	//zagraj(240,1000);
-	//glowna petla programu
 	initTimer0_2();
-	//zagraj2(440,100);
+	
 	while(1)
     {
-		//zagraj2(440,1000);
+		
     }
 	 
 
