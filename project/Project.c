@@ -46,11 +46,7 @@ void initSPI(void) {
 }
 // Function to send a byte via SPI
 void sendByteSPI(uint8_t info) {
-	//wysylamy jakies 128 albo 255,ja bym dala 255
-	//aktywacja
-	//uwaga - musimy wyslac infromacje - czyli CONTROL BITS, dlatego 16-bo robimy PDB,wylaczamy drugi konwerter,nie wiem co z tym bitem wskazujacym na napiecie
 	uint8_t data=(1<<5);
-	
 	SPIdrv->Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_ACTIVE);        /* Transmit some data */  
 	SPIdrv->Send(&data,sizeof(data));
 	ARM_SPI_STATUS state = SPIdrv->GetStatus();
@@ -99,10 +95,7 @@ void delay(int d)
 void zagraj2(int f,int time)
 {
 	
-	//jak to powinno byc zrobione:
-	
-	int pwm_period=100000/f;//dlaczego tys, tu powinna byc teoretycznie 1 s, ale mi intuicja mowi ze bedzie tu 1000
-	//dlugosc trwania
+	int pwm_period=100000/f;
 	int t=time/pwm_period;
 	for(int i=0;i<t;i++)
 	{
@@ -113,10 +106,6 @@ void zagraj2(int f,int time)
 			
 	}
 }
-
-//w tej funkcji bedziemy zapisywac elementy do tablicy jesli flaga zapis bedzie ustalona na 1, innaczej kazdy jeden dzwiek bedzie 
-//przesylany do odtwarzania
-
 
 void rysuj(char literka, uint16_t x, uint16_t y){
 	
@@ -157,10 +146,9 @@ void rysujprostokat( uint16_t x, uint16_t y,uint16_t xx, uint16_t yy,uint16_t co
 
 	}
 }
-//musi byc oddzielny timer -niezalezny delay
 void EINT3_IRQHandler()
 {
-	//static uint32_t time=0;
+	
 	if( LPC_GPIOINT->IO0IntStatR & (1<<19))
 	{	
 		//odliczanie czasu przez jaki przycisk bedzie przycisniety
@@ -287,32 +275,30 @@ void check()
         //kalibracja
         punkt_x+=(x[0]-500);
     }
-    //to trzeba zmienic
     if(punkt_x/5>(0) && punkt_x/5<200)
 	{
 		
-			 if(wcisnieto==0)
-			 {
-            if(zapis==0)
-            {
+	   if(wcisnieto==0)
+	   {
+            	if(zapis==0)
+           	 {
 							//delay(100);
-								rysujprostokat(0,10,28,130,LCDYellow);
-								zapis=1;
-								zagraj=0;
-            }
-            else if(zapis>0)
-            {
+							rysujprostokat(0,10,28,130,LCDYellow);
+							zapis=1;
+							zagraj=0;
+            	}
+               else if(zapis>0)
+               {
 							//delay(100);
-								rysujprostokat(0,10,28,130,LCDRed);
-		            zagraj=1;
-        
-							for(i=0;i<(zapis);i++){
-									zagraj2(melody[i].dzwiek,melody[i].time);
-									melody[i].dzwiek =0;
+							rysujprostokat(0,10,28,130,LCDRed);
+		            				zagraj=1;
+        						for(i=0;i<(zapis);i++){
+								zagraj2(melody[i].dzwiek,melody[i].time);
+								melody[i].dzwiek =0;
 							}
-						zapis=0;
-						wcisnieto=1;
-        }
+							zapis=0;
+							wcisnieto=1;
+          	}
 			}
 			
            return;
@@ -366,11 +352,9 @@ int main()
 	touchpanelInit();
 	conf();
 	initSPI();
-	//init_GPIO();
 	initTimer0_2();
 	initTimer0_1();
 	
-	//zagraj2(523,1000);
 	int registerStatus=lcdReadReg(OSCIL_ON);
 	
 	lcdWriteReg(ADRX_RAM,  0);
@@ -379,16 +363,10 @@ int main()
 	
 	uint16_t i=0;
 	
-  while(i<100)i++; /// idk po co,delay
+  while(i<100)i++;
 	
 	lcdWriteIndex(DATA_RAM);
 	rysujprostokat(0,0,320,240,LCDBlue);
-	
-	
-		/*rysuj('R',0,32);
-		rysuj('E',0,40);
-		rysuj('C',0,48);
-		rysuj(' ',0,56);;*/
 	rysujprostokat(0,10,28,130,LCDRed);
 		
 	for(i=0;i<8;i++)
